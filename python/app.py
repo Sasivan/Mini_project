@@ -16,7 +16,7 @@ CORS(app)  # Enable CORS for all routes
 print("Loading models, this may take a moment...")
 # Introduce a variable to hold the path to the landmark model.
 # This makes the code more readable and easier to maintain.
-face_model_path = "models/assets/shape_predictor_68_face_landmarks.dat"
+face_model_path = "python/models/assets/shape_predictor_68_face_landmarks.dat"
 
 # Check if the model file exists before proceeding.
 # This prevents the application from crashing if the file is missing.
@@ -71,8 +71,10 @@ def proctor():
     pose = pose_estimator.solve_pose_by_68_points(marks)
     
     # Unpack the pose to get individual rotation angles.
-    _, pitch, yaw = pose
-
+    rmat, _ = cv2.Rodrigues(pose[0])
+    _, _, _, _, _, _, euler_angles = cv2.decomposeProjectionMatrix(np.hstack((rmat, pose[1])))
+    pitch, yaw, _ = euler_angles.flatten()
+    
     # These thresholds determine how far the user can look away before it's
     # considered a violation. They may need tuning.
     if pitch > 20 or pitch < -30:
