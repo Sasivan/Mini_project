@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/proctor',
+        destination: 'http://localhost:8080/proctor',
+      },
+    ]
+  },
 };
 
 export default nextConfig;
