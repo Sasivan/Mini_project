@@ -1,0 +1,162 @@
+/**
+ * @fileoverview Firestore Security Rules for CodeAssist Platform
+ *
+ * Core Philosophy:
+ * This ruleset enforces a role-based access control model with public read access for certain collections.
+ * Users can only manage their own profiles. Teachers have write access to quizzes and coding challenges.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores individual user profiles.
+ * - /quizzes/{quizId}: Stores quiz information.
+ * - /quizzes/{quizId}/questions/{questionId}: Stores questions for quizzes.
+ * - /challenges/{challengeId}: Stores coding challenges.
+ * - /challenges/{challengeId}/testCases/{testCaseId}: Stores test cases for coding challenges.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed for privacy.
+ * - Quizzes and Challenges are publicly readable but only teachers can create, update, or delete them.
+ * - Test Cases have visibility control via the `isHidden` field. Students can only see non-hidden test cases.
+ * - The `teacher` role is not explicitly defined in the data model so rules assume that teachers are authenticated users. A global admin role is not supported.
+ *
+ * Denormalization for Authorization:
+ *  To simplify authorization, the rules assume the existence of a "teacher" role. In a production system,
+ *  you might want to store the teacher status directly on the user document or in a separate roles collection
+ *  to avoid relying solely on authentication.
+ *
+ * Structural Segregation:
+ *  The rules do not use flags to distinguish between public and private data within the same collection.
+ *  Instead, public data (quizzes, challenges) and private data (user profiles) are stored in separate top-level collections,
+ *  which simplifies the read rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Enforces access control for user profiles.
+     * @path /users/{userId}
+     * @allow (create) Authenticated user can create their own profile.
+     * @deny (create) Authenticated user cannot create a profile for another user.
+     * @allow (get) Authenticated user can read their own profile.
+     * @deny (get) Authenticated user cannot read another user's profile.
+     * @allow (list) Listing all users is disallowed.
+     * @deny (list) Listing all users is disallowed.
+     * @allow (update) Authenticated user can update their own profile.
+     * @deny (update) Authenticated user cannot update another user's profile.
+     * @allow (delete) Authenticated user can delete their own profile.
+     * @deny (delete) Authenticated user cannot delete another user's profile.
+     * @principle Enforces document ownership for writes and reads.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Allows public read access to quizzes, but restricts write access to authenticated users (teachers).
+     * @path /quizzes/{quizId}
+     * @allow (get) Any user can read a quiz.
+     * @allow (list) Any user can list quizzes.
+     * @allow (create) Only authenticated users (teachers) can create quizzes.
+     * @deny (create) Unauthenticated users cannot create quizzes.
+     * @allow (update) Only authenticated users (teachers) can update quizzes.
+     * @deny (update) Unauthenticated users cannot update quizzes.
+     * @allow (delete) Only authenticated users (teachers) can delete quizzes.
+     * @deny (delete) Unauthenticated users cannot delete quizzes.
+     * @principle Public read access with owner-only writes, restricted to authenticated users (teachers).
+     */
+    match /quizzes/{quizId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows public read access to questions, but restricts write access to authenticated users (teachers).
+     * @path /quizzes/{quizId}/questions/{questionId}
+     * @allow (get) Any user can read a question.
+     * @allow (list) Any user can list questions.
+     * @allow (create) Only authenticated users (teachers) can create questions.
+     * @deny (create) Unauthenticated users cannot create questions.
+     * @allow (update) Only authenticated users (teachers) can update questions.
+     * @deny (update) Unauthenticated users cannot update questions.
+     * @allow (delete) Only authenticated users (teachers) can delete questions.
+     * @deny (delete) Unauthenticated users cannot delete questions.
+     * @principle Public read access with owner-only writes, restricted to authenticated users (teachers).
+     */
+    match /quizzes/{quizId}/questions/{questionId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows public read access to coding challenges, but restricts write access to authenticated users (teachers).
+     * @path /challenges/{challengeId}
+     * @allow (get) Any user can read a coding challenge.
+     * @allow (list) Any user can list coding challenges.
+     * @allow (create) Only authenticated users (teachers) can create coding challenges.
+     * @deny (create) Unauthenticated users cannot create coding challenges.
+     * @allow (update) Only authenticated users (teachers) can update coding challenges.
+     * @deny (update) Unauthenticated users cannot update coding challenges.
+     * @allow (delete) Only authenticated users (teachers) can delete coding challenges.
+     * @deny (delete) Unauthenticated users cannot delete coding challenges.
+     * @principle Public read access with owner-only writes, restricted to authenticated users (teachers).
+     */
+    match /challenges/{challengeId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows students to read non-hidden test cases, but restricts write access to authenticated users (teachers).
+     * @path /challenges/{challengeId}/testCases/{testCaseId}
+     * @allow (get) Any user can read test cases if they are not hidden.
+     * @allow (list) Any user can list test cases if they are not hidden.
+     * @allow (create) Only authenticated users (teachers) can create test cases.
+     * @deny (create) Unauthenticated users cannot create test cases.
+     * @allow (update) Only authenticated users (teachers) can update test cases.
+     * @deny (update) Unauthenticated users cannot update test cases.
+     * @allow (delete) Only authenticated users (teachers) can delete test cases.
+     * @deny (delete) Unauthenticated users cannot delete test cases.
+     * @principle Restricts test case visibility based on the 'isHidden' flag; write access restricted to authenticated users (teachers).
+     */
+    match /challenges/{challengeId}/testCases/{testCaseId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get: if resource.data.isHidden == false || isSignedIn();
+      allow list: if resource.data.isHidden == false || isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+  }
+}

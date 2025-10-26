@@ -1,0 +1,220 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the CodeAssist platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role.",
+          "enum": ["student", "teacher"]
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "Quiz": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quiz",
+      "type": "object",
+      "description": "Represents a quiz with multiple-choice questions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Quiz entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the quiz."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the quiz."
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ]
+    },
+    "Question": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Question",
+      "type": "object",
+      "description": "Represents a question in a quiz.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Question entity."
+        },
+        "quizId": {
+          "type": "string",
+          "description": "Reference to Quiz. (Relationship: Quiz 1:N Question)"
+        },
+        "text": {
+          "type": "string",
+          "description": "The text of the question."
+        },
+        "options": {
+          "type": "array",
+          "description": "The possible answer options for the question.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "correctAnswerIndex": {
+          "type": "number",
+          "description": "The index of the correct answer in the options array."
+        }
+      },
+      "required": [
+        "id",
+        "quizId",
+        "text",
+        "options",
+        "correctAnswerIndex"
+      ]
+    },
+    "CodingChallenge": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Coding Challenge",
+      "type": "object",
+      "description": "Represents a coding challenge.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Coding Challenge entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the coding challenge."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the coding challenge."
+        },
+        "starterCode": {
+          "type": "string",
+          "description": "The starter code for the challenge."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description"
+      ]
+    },
+    "TestCase": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Test Case",
+      "type": "object",
+      "description": "Represents a test case for a coding challenge.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TestCase entity."
+        },
+        "challengeId": {
+          "type": "string",
+          "description": "Reference to CodingChallenge. (Relationship: CodingChallenge 1:N TestCase)"
+        },
+        "input": {
+          "type": "string",
+          "description": "The input for the test case."
+        },
+        "expectedOutput": {
+          "type": "string",
+          "description": "The expected output for the test case."
+        },
+        "isHidden": {
+          "type": "boolean",
+          "description": "Whether the test case is hidden from the user."
+        }
+      },
+      "required": [
+        "id",
+        "challengeId",
+        "input",
+        "expectedOutput",
+        "isHidden"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Path-based ownership: only the user can access their own profile."
+        }
+      },
+      {
+        "path": "/quizzes/{quizId}",
+        "definition": {
+          "entityName": "Quiz",
+          "schema": {
+            "$ref": "#/backend/entities/Quiz"
+          },
+          "description": "Stores quiz information. Publicly readable, only writable by teachers."
+        }
+      },
+      {
+        "path": "/quizzes/{quizId}/questions/{questionId}",
+        "definition": {
+          "entityName": "Question",
+          "schema": {
+            "$ref": "#/backend/entities/Question"
+          },
+          "description": "Stores questions for a quiz. Publicly readable, only writable by teachers."
+        }
+      },
+      {
+        "path": "/challenges/{challengeId}",
+        "definition": {
+          "entityName": "CodingChallenge",
+          "schema": {
+            "$ref": "#/backend/entities/CodingChallenge"
+          },
+          "description": "Stores coding challenges. Publicly readable, only writable by teachers."
+        }
+      },
+      {
+        "path": "/challenges/{challengeId}/testCases/{testCaseId}",
+        "definition": {
+          "entityName": "TestCase",
+          "schema": {
+            "$ref": "#/backend/entities/TestCase"
+          },
+          "description": "Stores test cases for a coding challenge. Only non-hidden cases readable by students. Writable only by teachers."
+        }
+      }
+    ]
+  }
+}
