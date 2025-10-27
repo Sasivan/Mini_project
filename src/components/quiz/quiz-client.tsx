@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import {
@@ -112,14 +113,11 @@ const QuizInProgress = ({ quiz, onRestart }: { quiz: Quiz, onRestart: () => void
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<number | null>(null);
-  const [cheatingReason, setCheatingReason] = useState<string | null>(null);
 
   useEffect(() => {
-    // Reset state when a new quiz is started
     setCurrentQuestion(0);
     setSelectedAnswers({});
     setScore(null);
-    setCheatingReason(null);
   }, [quiz]);
 
   const handleAnswerSelect = (value: string) => {
@@ -135,7 +133,6 @@ const QuizInProgress = ({ quiz, onRestart }: { quiz: Quiz, onRestart: () => void
   const handleSubmit = () => {
     let newScore = 0;
     quiz.questions.forEach((q, index) => {
-      // The stored answer is the option text. We need to find its index.
       const selectedOption = selectedAnswers[index];
       const selectedIndex = q.options.indexOf(selectedOption);
       if (selectedIndex === q.correctAnswerIndex) {
@@ -145,44 +142,11 @@ const QuizInProgress = ({ quiz, onRestart }: { quiz: Quiz, onRestart: () => void
     setScore(newScore);
   };
   
-  if (cheatingReason) {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-1">
-                <CameraFeed onCheatingDetected={() => {}} isEnabled={!cheatingReason} />
-            </div>
-            <div className="md:col-span-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-destructive flex items-center gap-2">
-                            <AlertTriangle />
-                            Exam Terminated
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Alert variant="destructive">
-                            <AlertTitle>Cheating Violation Detected</AlertTitle>
-                            <AlertDescription>
-                                Reason: <strong>{cheatingReason}</strong>. Your exam has been terminated. Please contact your administrator for more information.
-                            </AlertDescription>
-                        </Alert>
-                    </CardContent>
-                    <CardFooter>
-                        <Button onClick={onRestart} className="w-full">
-                            Back to Quizzes
-                        </Button>
-                    </CardFooter>
-                </Card>
-            </div>
-        </div>
-    )
-  }
-
   if (score !== null) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
-                 <CameraFeed onCheatingDetected={() => {}} isEnabled={false} />
+                 <CameraFeed isEnabled={false} />
             </div>
             <div className="md:col-span-2">
                 <Card>
@@ -216,7 +180,7 @@ const QuizInProgress = ({ quiz, onRestart }: { quiz: Quiz, onRestart: () => void
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
-             <CameraFeed onCheatingDetected={setCheatingReason} isEnabled={score === null && !cheatingReason} />
+             <CameraFeed isEnabled={score === null} />
         </div>
          <div className="lg:col-span-2">
             <Card>

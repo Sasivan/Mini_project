@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -99,8 +100,6 @@ export default function IdeLayout() {
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(defaultChallenges[0].id);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [challengeToDelete, setChallengeToDelete] = useState<{id: string, title: string} | null>(null);
-  const [cheatingReason, setCheatingReason] = useState<string | null>(null);
-
 
   const router = useRouter();
   const { toast } = useToast();
@@ -114,7 +113,6 @@ export default function IdeLayout() {
 
   const allChallenges = useMemo(() => {
       const dbChallenges = challengesFromDb || [];
-      // This is a simplified check. A more robust check might be needed if titles can be duplicated.
       const defaultTitles = new Set(defaultChallenges.map(d => d.title));
       const newDbChallenges = dbChallenges.filter(c => !defaultTitles.has(c.title));
       return [...defaultChallenges, ...newDbChallenges];
@@ -128,7 +126,6 @@ export default function IdeLayout() {
 
   useEffect(() => {
     if (selectedChallenge) {
-      setCheatingReason(null); // Reset cheating state on new challenge
       setCode(selectedChallenge.starterCode || defaultCode[language as keyof typeof defaultCode]);
       
       const fetchTestCases = async () => {
@@ -345,7 +342,7 @@ export default function IdeLayout() {
             <div className="flex items-center gap-4">
                 <div className='flex items-center gap-2'>
                     <span className="text-sm font-medium">Language:</span>
-                    <Select value={language} onValueChange={handleLanguageChange} disabled={!!cheatingReason}>
+                    <Select value={language} onValueChange={handleLanguageChange}>
                     <SelectTrigger className="w-[150px] h-9">
                         <SelectValue placeholder="Select language" />
                     </SelectTrigger>
@@ -359,7 +356,7 @@ export default function IdeLayout() {
                     </Select>
                 </div>
                  <div className='flex items-center gap-2'>
-                    <Button variant="outline" onClick={() => setSelectedChallengeId(null)} disabled={!!cheatingReason}>
+                    <Button variant="outline" onClick={() => setSelectedChallengeId(null)}>
                         <List className="mr-2 h-4 w-4" /> View All Challenges
                     </Button>
                 </div>
@@ -375,31 +372,6 @@ export default function IdeLayout() {
         </div>
         <div className="flex-1 overflow-hidden rounded-lg relative">
             <CodeEditor code={code} onCodeChange={setCode} />
-            {cheatingReason && (
-                <div className="absolute inset-0 bg-background/90 flex items-center justify-center z-10">
-                    <Card className="max-w-md w-full border-destructive">
-                        <CardHeader>
-                            <CardTitle className="text-destructive flex items-center gap-2">
-                                <AlertTriangle />
-                                Session Terminated
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Alert variant="destructive">
-                                <AlertTitle>Proctoring Violation Detected</AlertTitle>
-                                <AlertDescription>
-                                    Reason: <strong>{cheatingReason}</strong>. Your coding session has been terminated.
-                                </AlertDescription>
-                            </Alert>
-                        </CardContent>
-                         <CardFooter>
-                            <Button onClick={() => setSelectedChallengeId(null)} className="w-full">
-                                Back to Challenges
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                </div>
-            )}
         </div>
       </div>
        <div className={cn(
@@ -407,14 +379,14 @@ export default function IdeLayout() {
         isPanelVisible ? "w-[35%]" : "w-0"
       )} style={{ overflow: isPanelVisible ? 'visible' : 'hidden' }}>
         
-        <CameraFeed onCheatingDetected={setCheatingReason} isEnabled={!!selectedChallengeId && !cheatingReason} />
+        <CameraFeed isEnabled={!!selectedChallengeId} />
 
         <Card className="flex-1 flex flex-col overflow-hidden">
             <CardContent className="flex-1 flex flex-col p-0">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                     <TabsList className="m-2 grid grid-cols-2">
-                        <TabsTrigger value="challenge-details" disabled={!!cheatingReason}>Challenge</TabsTrigger>
-                        <TabsTrigger value="test-cases" disabled={!!cheatingReason}>Test Cases</TabsTrigger>
+                        <TabsTrigger value="challenge-details">Challenge</TabsTrigger>
+                        <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
                     </TabsList>
                     <TabsContent value="challenge-details" className="flex-1 overflow-y-auto p-4 m-0">
                         <div className="space-y-4">
@@ -429,15 +401,15 @@ export default function IdeLayout() {
                     </TabsContent>
                 </Tabs>
                 <div className="border-t p-2 flex gap-2 justify-end flex-wrap">
-                    <Button variant="outline" onClick={handleRun} disabled={isRunning || isSubmitting || !!cheatingReason}>
+                    <Button variant="outline" onClick={handleRun} disabled={isRunning || isSubmitting}>
                         {isRunning ? <Loader2 className="animate-spin" /> : <Play />}
                         Run
                     </Button>
-                    <Button onClick={handleSubmit} disabled={isRunning || isSubmitting || !!cheatingReason}>
+                    <Button onClick={handleSubmit} disabled={isRunning || isSubmitting}>
                         {isSubmitting ? <Loader2 className="animate-spin" /> : <Send />}
                         Submit
                     </Button>
-                    <Button variant="secondary" onClick={handleAnalyze} disabled={isRunning || isSubmitting || !!cheatingReason}>
+                    <Button variant="secondary" onClick={handleAnalyze} disabled={isRunning || isSubmitting}>
                         <Bot />
                         Analyze
                     </Button>
