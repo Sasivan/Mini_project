@@ -376,19 +376,20 @@ export default function IdeLayout() {
       </div>
        <div className={cn(
         "flex flex-col gap-4 transition-all duration-300",
-        isPanelVisible ? "w-[35%]" : "w-0"
-      )} style={{ overflow: isPanelVisible ? 'visible' : 'hidden' }}>
+        isPanelVisible ? "w-[35%]" : "w-0",
+        !isPanelVisible && "hidden"
+      )}>
         
         <CameraFeed isEnabled={!!selectedChallengeId} />
 
         <Card className="flex-1 flex flex-col overflow-hidden">
-            <CardContent className="flex-1 flex flex-col p-0">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                    <TabsList className="m-2 grid grid-cols-2">
-                        <TabsTrigger value="challenge-details">Challenge</TabsTrigger>
-                        <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="challenge-details" className="flex-1 overflow-y-auto p-4 m-0">
+             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
+                <TabsList className="m-2 grid grid-cols-2">
+                    <TabsTrigger value="challenge-details">Challenge</TabsTrigger>
+                    <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
+                </TabsList>
+                <div className="flex-1 overflow-y-auto">
+                    <TabsContent value="challenge-details" className="p-4 m-0">
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold font-headline">{selectedChallenge?.title || "No Challenge Selected"}</h3>
                             <p className='text-sm text-muted-foreground'>
@@ -396,11 +397,11 @@ export default function IdeLayout() {
                             </p>
                         </div>
                     </TabsContent>
-                    <TabsContent value="test-cases" className="flex-1 overflow-y-auto p-4 m-0">
+                    <TabsContent value="test-cases" className="p-4 m-0">
                         <TestCasesPanel testCases={testCases} />
                     </TabsContent>
-                </Tabs>
-                <div className="border-t p-2 flex gap-2 justify-end flex-wrap">
+                </div>
+                 <div className="border-t p-2 flex gap-2 justify-end flex-wrap">
                     <Button variant="outline" onClick={handleRun} disabled={isRunning || isSubmitting}>
                         {isRunning ? <Loader2 className="animate-spin" /> : <Play />}
                         Run
@@ -414,7 +415,7 @@ export default function IdeLayout() {
                         Analyze
                     </Button>
                 </div>
-            </CardContent>
+            </Tabs>
         </Card>
       </div>
 
@@ -436,3 +437,5 @@ export default function IdeLayout() {
     </div>
   );
 }
+
+    
