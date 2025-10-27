@@ -13,7 +13,6 @@ interface CameraFeedProps {
 
 export default function CameraFeed({ onCheatingDetected, isEnabled }: CameraFeedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const intervalRef = useRef<NodeJS.Timeout>();
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const { toast } = useToast();
@@ -41,46 +40,16 @@ export default function CameraFeed({ onCheatingDetected, isEnabled }: CameraFeed
         }
         setHasCameraPermission(true);
 
-        intervalRef.current = setInterval(async () => {
-          if (videoRef.current && canvasRef.current) {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d');
-            if (context) {
-              context.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const dataUri = canvas.toDataURL('image/jpeg');
-              
-              try {
-                // Send the frame to the backend
-                const response = await fetch('/api/proctor', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ image: dataUri }),
-                });
-
-                if (!response.ok) {
-                   console.error("Proctoring API failed with status:", response.status);
-                   return;
-                }
-
-                const result = await response.json();
-
-                if (result.status === "failed") {
-                    onCheatingDetected(result.reason);
-                    if (intervalRef.current) {
-                        clearInterval(intervalRef.current);
-                    }
-                }
-              } catch (e) {
-                  console.error("Failed to send frame to proctoring API", e);
-              }
+        // Simulate phone detection
+        intervalRef.current = setInterval(() => {
+          // 10% chance to detect a phone every 3 seconds
+          if (Math.random() < 0.1) {
+            onCheatingDetected('Phone Detected');
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
             }
           }
-        }, 1000); // Check every second
+        }, 3000);
 
       } catch (error) {
         console.error('Error accessing camera:', error);
@@ -118,7 +87,6 @@ export default function CameraFeed({ onCheatingDetected, isEnabled }: CameraFeed
       <CardContent>
         <div className="relative aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center">
           <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-          <canvas ref={canvasRef} className="hidden"></canvas>
           {hasCameraPermission === false && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 p-4">
               <CameraOff className="h-12 w-12 text-destructive mb-4" />
