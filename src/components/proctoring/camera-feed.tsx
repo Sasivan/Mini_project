@@ -43,8 +43,8 @@ export default function CameraFeed({ onCheatingDetected, isEnabled }: CameraFeed
 
         // Simulate phone detection
         intervalRef.current = setInterval(() => {
-          // 10% chance to detect a phone every 3 seconds
-          if (Math.random() < 0.1) {
+          // 1% chance to detect a phone every 3 seconds
+          if (Math.random() < 0.01) {
             onCheatingDetected('Phone Detected');
             if (intervalRef.current) {
               clearInterval(intervalRef.current);
