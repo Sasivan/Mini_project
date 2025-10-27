@@ -1,3 +1,4 @@
+
 import cv2
 import numpy as np
 import base64
@@ -8,7 +9,6 @@ from flask_cors import CORS
 
 from models.mark_detector import MarkDetector
 from models.pose_estimator import PoseEstimator
-from models.phone_detector import PhoneDetector
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -28,7 +28,6 @@ if not os.path.exists(face_model_path):
 # By loading them once, we significantly speed up the processing of each frame.
 mark_detector = MarkDetector(face_model_path)
 pose_estimator = PoseEstimator(img_size=(240, 320))
-phone_detector = PhoneDetector()
 print("Models loaded successfully.")
 
 
@@ -81,10 +80,6 @@ def proctor():
         return jsonify({"status": "failed", "reason": "Looking Down/Up"})
     if yaw > 25 or yaw < -25:
         return jsonify({"status": "failed", "reason": "Looking Away"})
-
-    # --- 3. Phone Detection ---
-    if phone_detector.detect(frame):
-         return jsonify({"status": "failed", "reason": "Phone Detected"})
 
     # If all checks pass, return an "ok" status.
     return jsonify({"status": "ok"})
