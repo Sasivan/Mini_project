@@ -2,33 +2,19 @@
 import cv2
 import numpy as np
 import base64
-import os
+import dlib
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from models.mark_detector import MarkDetector
-from models.pose_estimator import PoseEstimator
-
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-print("Loading models, this may take a moment...")
-# Introduce a variable to hold the path to the landmark model.
-# This makes the code more readable and easier to maintain.
-face_model_path = "python/models/assets/shape_predictor_68_face_landmarks.dat"
-
-# Check if the model file exists before proceeding.
-# This prevents the application from crashing if the file is missing.
-if not os.path.exists(face_model_path):
-    raise FileNotFoundError(f"Model file not found at {face_model_path}")
-
-# Initialize the MarkDetector and PoseEstimator once when the app starts.
-# This is a crucial optimization. Loading models on every request is very slow.
-# By loading them once, we significantly speed up the processing of each frame.
-mark_detector = MarkDetector(face_model_path)
-pose_estimator = PoseEstimator(img_size=(240, 320))
-print("Models loaded successfully.")
+print("Loading face detector...")
+# Initialize dlib's frontal face detector. This is a built-in detector
+# and does not require an external model file for basic face detection.
+face_detector = dlib.get_frontal_face_detector()
+print("Face detector loaded successfully.")
 
 
 def readb64(uri):
@@ -45,7 +31,7 @@ def readb64(uri):
 
 @app.route("/proctor", methods=['POST'])
 def proctor():
-    """Analyzes a single frame for proctoring violations."""
+    """Analyzes a single frame to ensure a face is present."""
     json_data = request.get_json()
     if not json_data or 'image' not in json_data:
         return jsonify({"status": "failed", "reason": "No image provided"}), 400
@@ -54,34 +40,21 @@ def proctor():
     if frame is None:
         return jsonify({"status": "failed", "reason": "Invalid image data"}), 400
     
-    # Resize frame for faster processing
-    frame_small = cv2.resize(frame, (320, 240))
+    # Convert the frame to grayscale for dlib's face detector.
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
-    # --- 1. Face Detection ---
-    # The mark_detector is now used to find both the face and its landmarks.
-    facebox, marks = mark_detector.get_marks(frame_small)
+    # --- Face Detection ---
+    # Detect faces in the grayscale image.
+    faces = face_detector(gray, 0)
     
-    # If no face is found (facebox is None), we can immediately stop.
-    if facebox is None:
+    # If no faces are detected, it's a violation.
+    if len(faces) == 0:
         return jsonify({"status": "failed", "reason": "No Face Detected"})
+    # If more than one face is detected, it could also be a violation.
+    if len(faces) > 1:
+        return jsonify({"status": "failed", "reason": "Multiple Faces Detected"})
 
-    # --- 2. Head Pose Estimation (Gaze) ---
-    # The pose_estimator uses the landmarks to determine the head's rotation.
-    pose = pose_estimator.solve_pose_by_68_points(marks)
-    
-    # Unpack the pose to get individual rotation angles.
-    rmat, _ = cv2.Rodrigues(pose[0])
-    _, _, _, _, _, _, euler_angles = cv2.decomposeProjectionMatrix(np.hstack((rmat, pose[1])))
-    pitch, yaw, _ = euler_angles.flatten()
-    
-    # These thresholds determine how far the user can look away before it's
-    # considered a violation. They may need tuning.
-    if pitch > 20 or pitch < -30:
-        return jsonify({"status": "failed", "reason": "Looking Down/Up"})
-    if yaw > 25 or yaw < -25:
-        return jsonify({"status": "failed", "reason": "Looking Away"})
-
-    # If all checks pass, return an "ok" status.
+    # If exactly one face is detected, everything is okay.
     return jsonify({"status": "ok"})
 
 

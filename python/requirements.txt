@@ -4,9 +4,3 @@ gunicorn
 numpy
 opencv-python
 dlib
-tensorflow
-requests
-Pillow
-scipy
-imutils
-matplotlib
